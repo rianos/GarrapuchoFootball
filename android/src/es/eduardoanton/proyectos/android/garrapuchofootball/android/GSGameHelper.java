@@ -1,8 +1,10 @@
 package es.eduardoanton.proyectos.android.garrapuchofootball.android;
 
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.nio.ByteBuffer;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
@@ -10,6 +12,7 @@ import android.view.WindowManager;
 
 import com.badlogic.gdx.Gdx;
 import com.google.android.gms.games.Games;
+import com.google.android.gms.games.GamesActivityResultCodes;
 import com.google.android.gms.games.GamesStatusCodes;
 import com.google.android.gms.games.multiplayer.Multiplayer;
 import com.google.android.gms.games.multiplayer.realtime.RealTimeMessage;
@@ -18,12 +21,18 @@ import com.google.android.gms.games.multiplayer.realtime.Room;
 import com.google.android.gms.games.multiplayer.realtime.RoomConfig;
 import com.google.android.gms.games.multiplayer.realtime.RoomStatusUpdateListener;
 import com.google.android.gms.games.multiplayer.realtime.RoomUpdateListener;
+import com.google.example.games.basegameutils.BaseGameUtils;
 import com.google.example.games.basegameutils.GameHelper;
+
+
+import es.eduardoanton.proyectos.android.garrapuchofootball.GarrapuchoFootball;
 
 public class GSGameHelper extends GameHelper implements RoomUpdateListener, RealTimeMessageReceivedListener,RoomStatusUpdateListener {
 	static final int RC_SELECT_PLAYERS = 454545;
 	static final int RC_WAITING_ROOM = 423523;
 	private Activity activity;
+	private String mRoomID;
+	private GarrapuchoFootball game;
 	
 	public GSGameHelper(Activity activity, int clientsToUse) {
 		super(activity, clientsToUse);
@@ -44,7 +53,7 @@ public class GSGameHelper extends GameHelper implements RoomUpdateListener, Real
 	}
 	
 	public void initMatch(){
-		Intent intent = Games.RealTimeMultiplayer.getSelectOpponentsIntent(getApiClient(), 1, 3);
+		Intent intent = Games.RealTimeMultiplayer.getSelectOpponentsIntent(getApiClient(), 1, 1);
 		this.activity.startActivityForResult(intent, RC_SELECT_PLAYERS);
 	}
 	
@@ -55,7 +64,18 @@ public class GSGameHelper extends GameHelper implements RoomUpdateListener, Real
 	}
 
 	public void onActivityResult(int request,int response, Intent data){
-		if (request == GSGameHelper.RC_SELECT_PLAYERS){
+		if (request == GSGameHelper.RC_WAITING_ROOM){
+			if (response == Activity.RESULT_CANCELED || response == GamesActivityResultCodes.RESULT_LEFT_ROOM ){
+				 Games.RealTimeMultiplayer.leave(getApiClient(), this, mRoomID);
+		         activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+		         BaseGameUtils.showAlert(activity, "Partida abandonada");
+			}else{
+				  BaseGameUtils.showAlert(activity, "Comenzando partida");
+				  this.game.multiplayerGameReady();
+			}
+		
+		}
+		else if (request == GSGameHelper.RC_SELECT_PLAYERS){
 			if (response != Activity.RESULT_OK) {
 	            // user canceled
 	            return;
@@ -113,7 +133,8 @@ public class GSGameHelper extends GameHelper implements RoomUpdateListener, Real
 
 	@Override
 	public void onLeftRoom(int arg0, String arg1) {
-		// TODO Auto-generated method stub
+		BaseGameUtils.makeSimpleDialog(activity, "Abandonado partida");
+		Gdx.app.log("LEAVE", "Me fui de la Room");
 		
 	}
 
@@ -122,23 +143,44 @@ public class GSGameHelper extends GameHelper implements RoomUpdateListener, Real
 		// TODO Auto-generated method stub
 		
 	}
+	
+	public void setGame(GarrapuchoFootball game){
+		this.game = game;
+	}
 
 	@Override
 	public void onRoomCreated(int arg0, Room arg1) {
 		if (arg0 != GamesStatusCodes.STATUS_OK) {
+			//BaseGameUtils.showAlert(activity, "Room creation error");
+			BaseGameUtils.makeSimpleDialog(activity, "Error al crear la partida", "Room creation error").show();
 			Gdx.app.log("R", "Room Created FAILED");
 		}else{
 			Gdx.app.log("R", "Room Created");
-		  Intent i = Games.RealTimeMultiplayer.getWaitingRoomIntent(getApiClient(), arg1, Integer.MAX_VALUE);
+			mRoomID = arg1.getRoomId();
+		  Intent i = Games.RealTimeMultiplayer.getWaitingRoomIntent(getApiClient(), arg1, 2);
 		  this.activity.startActivityForResult(i, RC_WAITING_ROOM);
 		}
 		
 	}
+	
+	public void sendPos(float x,float y){
+		try{
+			byte[] mensaje;
+			mensaje = ByteBuffer.allocate(8).putFloat(x).putFloat(y).array();
+			Games.RealTimeMultiplayer.sendUnreliableMessageToOthers(getApiClient(), mensaje, mRoomID);
+		}catch(Exception e){
+			
+		}
+	}
 
 	@Override
-	public void onRealTimeMessageReceived(RealTimeMessage arg0) {
-		// TODO Auto-generated method stub
-		
+	public void onRealTimeMessageReceived(RealTimeMessage rtm) {
+		float x, y;
+		byte[] b = rtm.getMessageData();
+		ByteBuffer bf = ByteBuffer.wrap(b);
+		x = bf.getFloat();
+		y = bf.getFloat();
+		game.updateGameWorld(x,y);
 	}
 
 	@Override

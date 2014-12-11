@@ -6,4 +6,6 @@ public interface IGoogleServices{
 	public boolean isSignedIn();
 	public void QuickGame();
 	public void initMatch();
+	public void setGame(GarrapuchoFootball game);
+	public void sendPos(float x,float y);
 }

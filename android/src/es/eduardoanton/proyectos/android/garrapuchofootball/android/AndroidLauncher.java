@@ -1,5 +1,6 @@
 package es.eduardoanton.proyectos.android.garrapuchofootball.android;
 
+import java.io.IOException;
 import java.util.List;
 
 import android.content.Intent;
@@ -114,5 +115,14 @@ public class AndroidLauncher extends AndroidApplication implements IGoogleServic
 	{
 		super.onActivityResult(requestCode, resultCode, data);
 		_gameHelper.onActivityResult(requestCode, resultCode, data);
+	}
+
+	@Override
+	public void setGame(GarrapuchoFootball game) {
+		_gameHelper.setGame(game);	
+	}
+	
+	public void sendPos(float x,float y){
+		_gameHelper.sendPos(x,y);
 	}
 }

@@ -17,13 +17,14 @@ public class GarrapuchoFootball extends Game {
 	public static Preferences prefs;
 	public final static float screenwidth = 1280f;
 	public final static float screenheight = 720f;
-	public static Screen loadingscreen,ingamescreen;
+	public static Screen loadingscreen,ingamescreen,mainscreen;
 	public static GameWorld gamew;
 	public static IGoogleServices GS;
 	
 	public GarrapuchoFootball(IGoogleServices igs){
 		super();
 		GarrapuchoFootball.GS = igs;
+		GS.setGame(this);
 	}
 	
 	public void create() {
@@ -43,15 +44,28 @@ public class GarrapuchoFootball extends Game {
 		asset.load("loading.gif", Texture.class);
 		asset.load("empty.png", Texture.class);
 		asset.load("full.png", Texture.class);
+		asset.load("button-purple.png", Texture.class);
+		asset.load("button-red.png", Texture.class);
 	}
 	
 	public void mainscreen(){
 		gamew = new GameWorld(this);
-		//mainscreen = new MainScreen(this);
+		mainscreen = new MainScreen(this);
 		ingamescreen = new IngameScreen( this );
 		//gameoverscreen = new GameOverScreen(this);
 		//creditsscreen = new CreditsScreen(this);
 		//instructionscreen = new InstructionsScreen(this);
+		this.setScreen(mainscreen);
+	}
+	
+	public void multiplayerGameReady(){
+		gamew.multiplayer = true;
+		Gdx.app.log("EMPEZANDO", "Empezando partida");
 		this.setScreen(ingamescreen);
+	}
+	
+	public void updateGameWorld(float x, float y){
+		gamew.px = x;
+		gamew.py = y;
 	}
 }
